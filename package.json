@@ -1,0 +1,11 @@
+{
+  "name": "rvk-night-network",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "tune": "node scripts/tune.js",
+    "dev": "node scripts/serve.js 5173"
+  }
+}

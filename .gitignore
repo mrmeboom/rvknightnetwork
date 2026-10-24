@@ -1,0 +1,11 @@
+# local only
+.DS_Store
+.claude/
+plan.md
+node_modules/
+
+# old input and test pages that are not part of the app
+gemini.txt
+rvk_night_network.html
+fonts_test.html
+fonts/DepartureMono-*
