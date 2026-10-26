@@ -3,6 +3,8 @@ import { FONT_FAMILY, LABEL_GAP } from '../render/canvas2d.js';
 import { nodeLabel, tagLines } from './tagtext.js';
 
 const MAX_LOG = 40;
+const TITLE_LEFT = 'RVK NIGHT NETWORK.CONSTELLATIONS';
+const TITLE_RIGHT = 'MRTY.26';
 
 function clock(t) {
   const m = Math.floor(t / 60), s = t - m * 60;
@@ -47,6 +49,7 @@ export class Hud {
     ctx.strokeStyle = '#fff';
     ctx.textBaseline = 'alphabetic';
 
+    if (H.titles) this._titles(ctx, size, pad, vw, H.alpha);
     if (H.ledger) this._ledger(ctx, world, state, size, lh, pad, vh, H.alpha);
     if (H.log) this._log(ctx, world, size, lh, pad, vw, vh, H.alpha);
     if (H.ruler) this._ruler(ctx, world, look, vw, vh, size, H.alpha);
@@ -56,6 +59,17 @@ export class Hud {
       if (n && n.r) this._tag(ctx, n, look, size, lh, vw, vh, H.alpha);
     }
     ctx.restore();
+  }
+
+  // Two fixed labels in the top corners, set like the ledger in the bottom left.
+  _titles(ctx, size, pad, vw, alpha) {
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = 'left';
+    ctx.fillText(TITLE_LEFT, pad, pad + size * 0.8);
+    ctx.textAlign = 'right';
+    ctx.fillText(TITLE_RIGHT, vw - pad, pad + size * 0.8);
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
   }
 
   _ledger(ctx, world, state, size, lh, pad, vh, alpha) {

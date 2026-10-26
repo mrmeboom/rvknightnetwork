@@ -186,6 +186,7 @@
     {"name": "Heritage", "type": "genre"},
 
     {"name": "Liveable City", "type": "theme"},
+    {"name": "Local Economy", "type": "theme"},
     {"name": "Night Culture", "type": "theme"},
     {"name": "Music", "type": "theme"},
     {"name": "Art", "type": "theme"},

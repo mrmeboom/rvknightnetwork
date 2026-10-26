@@ -51,6 +51,7 @@ num('look.grainFps', 'Grain refresh (fps)', 'Grain and base tone', 1, 60, 1, 20)
 num('look.grainSize', 'Grain size (px)', 'Grain and base tone', 1, 4, 1, 1);
 num('look.bgTone', 'Sky base tone (0-30)', 'Grain and base tone', 0, 30, 1, 0);
 
+flag('hud.titles', 'Corner titles (top left and right)', 'HUD', true);
 flag('hud.ledger', 'A. Corner ledger', 'HUD', true);
 flag('hud.tags', 'B. Hover / grab tags', 'HUD', true);
 flag('hud.linkNotes', 'C. Link annotations', 'HUD', false);

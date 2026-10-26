@@ -185,3 +185,19 @@ test('panel: Essentials is a short list, and the rest is much longer', () => {
   assert.ok([...advanced.values()].flat().length > 3 * n);
   assert.equal(ESSENTIALS.flatMap((s) => s.paths).length, n);
 });
+
+test('corner titles: the title top left and the mark top right, set like the ledger, and switchable', () => {
+  const w = makeWorld();
+  const look = resolveLook({});
+  const R = { vw: 1440, vh: 860, dpr: 1 };
+  const draw = (lk) => { const ctx = fakeCtx(); new Hud().draw(ctx, R, w, lk, { paused: false }); return ctx.calls; };
+  const calls = draw(look);
+  const left = calls.find((c) => c.text === 'RVK NIGHT NETWORK.CONSTELLATIONS');
+  const right = calls.find((c) => c.text === 'MRTY.26');
+  assert.ok(left && right, 'both titles are drawn');
+  assert.ok(left.x < 40 && left.y < 40, 'top left');
+  assert.ok(right.x > 1440 - 40 && right.y === left.y, 'top right, on the same line');
+  const ledger = calls.find((c) => c.text.startsWith('SEED'));
+  assert.equal(left.font, ledger.font, 'same type size as the corner ledger');
+  assert.ok(!draw(resolveLook({ hud: { titles: false } })).some((c) => c.text === 'MRTY.26'), 'can be turned off');
+});
