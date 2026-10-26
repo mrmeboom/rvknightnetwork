@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { World } from '../src/sim/world.js';
+import { randomSeed } from '../src/seed.js';
 import { NODE_LIST } from './helpers.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -50,4 +51,16 @@ test('start: the network is there from the first moments, so a short warm-up is 
 test('start: the warm-up in the app is short', () => {
   const m = read('src/main.js').match(/const WARMUP = (\d+(?:\.\d+)?);/);
   assert.ok(m && Number(m[1]) <= 5, `warm-up is ${m && m[1]} s`);
+});
+
+test('seed: every load rolls its own rvk-xxxx seed, the same shape as the reroll button', () => {
+  const seeds = new Set(Array.from({ length: 200 }, () => randomSeed()));
+  for (const s of seeds) assert.match(s, /^rvk-\d{4}$/);
+  assert.ok(seeds.size > 150, `${seeds.size} different seeds in 200 rolls`);
+  assert.equal(randomSeed(() => 0), 'rvk-1000');
+  assert.equal(randomSeed(() => 0.9999), 'rvk-9999');
+  const main = read('src/main.js');
+  assert.ok(!/seed: 'rvk'/.test(main), 'no fixed seed is left in the app');
+  assert.match(main, /recipe\.seed = url\.get\('seed'\) \|\| randomSeed\(\)/);
+  assert.match(main, /reroll\(\) \{ this\.applySeed\(randomSeed\(\)\)/);
 });

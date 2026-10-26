@@ -8,6 +8,7 @@ import { Input } from './ui/input.js';
 import { Panel } from './ui/panel.js';
 import { resolveLook } from './ui/look.js';
 import { MACROS } from './sim/macros.js';
+import { randomSeed } from './seed.js';
 import { getPath, setPath, clampToSchema, sanitizeParams } from './sim/params.js';
 
 const STORE_KEY = 'rvk.state.v1';
@@ -70,7 +71,7 @@ const app = {
   togglePause() { this.paused = !this.paused; },
   stepOnce() { this.paused = true; this.stepReq = true; panel.refresh(); },
   applySeed(seed) { const r = this.recipe(); r.seed = seed; r.time = WARMUP; this.build(r); },
-  reroll() { this.applySeed(`rvk-${Math.floor(Math.random() * 9000 + 1000)}`); },
+  reroll() { this.applySeed(randomSeed()); },
   jumpTo(t) { const r = this.recipe(); r.time = t; this.build(r); this.flash(`JUMPED TO ${t}S (LIVE EDITS ARE NOT REPLAYED)`); },
   addNode(name, type) { this.world.addNode({ name, type }); this.save(); },
   async reloadNodes() {
@@ -85,7 +86,7 @@ const app = {
     this.lookOverrides = {};
     this.look = resolveLook({});
     this.applyLook();
-    this.build({ seed: 'rvk', time: WARMUP, nodes: this.nodeList });
+    this.build({ seed: randomSeed(), time: WARMUP, nodes: this.nodeList });
     this.flash('BACK TO DEFAULTS');
   },
 
@@ -207,13 +208,14 @@ async function boot() {
 
   const url = new URLSearchParams(location.search);
   const saved = url.has('fresh') ? null : loadSaved();
-  let recipe = saved ? { ...cleanRecipe(saved.recipe).recipe, look: saved.look, time: WARMUP } : { seed: 'rvk', time: WARMUP, nodes: app.nodeList };
+  // settings come back from the saved state, but the seed is new on every load (unless the address names one)
+  let recipe = saved ? { ...cleanRecipe(saved.recipe).recipe, look: saved.look, time: WARMUP } : { time: WARMUP, nodes: app.nodeList };
+  recipe.seed = url.get('seed') || randomSeed();
   // nodes.json was edited since this state was saved: use the file's list (nodes added in the panel are not kept)
   const nodesChanged = saved && saved.nodeSig !== app.nodeSig;
   if (nodesChanged) recipe.nodes = app.nodeList;
-  if (url.get('seed')) recipe = { ...recipe, seed: url.get('seed') };
   try { app.build(recipe); }
-  catch (err) { console.warn('Saved state could not be loaded, starting fresh:', err); app.build({ seed: 'rvk', time: WARMUP, nodes: app.nodeList }); }
+  catch (err) { console.warn('Saved state could not be loaded, starting fresh:', err); app.build({ seed: randomSeed(), time: WARMUP, nodes: app.nodeList }); }
   app.applyLook();
 
   input = new Input(overlayCanvas, app);
