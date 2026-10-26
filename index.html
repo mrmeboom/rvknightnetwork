@@ -5,12 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RVK Night Network</title>
 <link rel="preload" href="fonts/BungeeHairline-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="nodes.json" as="fetch" crossorigin>
+<!-- every module the app needs, fetched in parallel instead of one import level at a time (a test keeps this list in step with the imports) -->
+<link rel="modulepreload" href="src/main.js">
+<link rel="modulepreload" href="src/recipe.js">
+<link rel="modulepreload" href="src/render/canvas2d.js">
+<link rel="modulepreload" href="src/render/grain.js">
+<link rel="modulepreload" href="src/render/sky.js">
+<link rel="modulepreload" href="src/render/skymath.js">
+<link rel="modulepreload" href="src/render/trailclock.js">
+<link rel="modulepreload" href="src/render/trails.js">
+<link rel="modulepreload" href="src/sim/macros.js">
+<link rel="modulepreload" href="src/sim/noise.js">
+<link rel="modulepreload" href="src/sim/params.js">
+<link rel="modulepreload" href="src/sim/rng.js">
+<link rel="modulepreload" href="src/sim/world.js">
+<link rel="modulepreload" href="src/ui/essentials.js">
+<link rel="modulepreload" href="src/ui/hud.js">
+<link rel="modulepreload" href="src/ui/input.js">
+<link rel="modulepreload" href="src/ui/look.js">
+<link rel="modulepreload" href="src/ui/panel.js">
+<link rel="modulepreload" href="src/ui/tagtext.js">
 <link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="src/ui/panel.css">
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-  #grain { position: fixed; inset: 0; pointer-events: none; }
+  #grain { position: fixed; inset: 0; pointer-events: none; opacity: 0; } /* switched on by the script once the first frame is drawn */
   #fatal { position: fixed; left: 18px; bottom: 18px; color: #fff; font: 12px ui-monospace, monospace; }
 </style>
 </head>

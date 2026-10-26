@@ -11,7 +11,9 @@ import { MACROS } from './sim/macros.js';
 import { getPath, setPath, clampToSchema, sanitizeParams } from './sim/params.js';
 
 const STORE_KEY = 'rvk.state.v1';
-const WARMUP = 30;
+// A few simulated seconds is enough: links form the moment nodes are in range, so the network is there from the
+// first step, and the log is cleared so the opening burst of links does not flood it. (30 s cost ~0.9 s of boot.)
+const WARMUP = 3;
 const $ = (id) => document.getElementById(id);
 
 const skyCanvas = $('sky'), sceneCanvas = $('scene'), overlayCanvas = $('overlay'), grainEl = $('grain'), panelEl = $('panel');
@@ -135,7 +137,7 @@ const app = {
   },
 
   async loadNodeList() {
-    const res = await fetch('nodes.json', { cache: 'no-store' });
+    const res = await fetch('nodes.json');
     if (!res.ok) throw new Error(`nodes.json: HTTP ${res.status}`);
     this.nodeList = (await res.json()).nodes.map(({ name, type }) => ({ name, type }));
     this.nodeSig = this.nodeList.map((n) => `${n.type}:${n.name}`).join('|');
@@ -143,7 +145,7 @@ const app = {
 
   applyLook() {
     const L = this.look.look;
-    grainEl.style.opacity = String(L.grain);
+    grainEl.style.opacity = this.revealed ? String(L.grain) : '0'; // stays off until the first frame, so no raw noise shows while loading
     grainEl.style.backgroundSize = `${grainTile.width * L.grainSize}px`;
     document.body.style.background = '#000';
   },
@@ -198,6 +200,7 @@ function loadSaved() {
 }
 
 async function boot() {
+  performance.mark('rvk-boot-start');
   await Promise.all([document.fonts.load('11px "Bungee Hairline"', 'ÞÐþðÁ'), app.loadNodeList()]);
   resize();
   window.addEventListener('resize', resize);
@@ -270,6 +273,7 @@ async function boot() {
     overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
     app.hud.draw(overlayCtx, app.renderer, w, app.look, { paused: app.paused, hoverId: input.hoverId, heldId: input.heldId });
     app.frames = (app.frames || 0) + 1;
+    if (!app.revealed) { app.revealed = true; app.applyLook(); performance.mark('rvk-first-frame'); }
   };
   const frame = (now) => {
     try { step(now); }
