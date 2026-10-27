@@ -22,6 +22,7 @@ num('look.maxBlur', 'Out-of-focus blur (px)', 'View', 0, 20, 0.5, 5);
 
 num('look.markSize', 'Mark size', 'Marks and labels', 0.4, 3, 0.05, 1);
 choice('look.labels', 'Labels', 'Marks and labels', ['all', 'focus', 'hover', 'none'], 'all');
+flag('look.labelRotate', 'Turn 90°', 'Marks and labels', false);
 num('look.labelSize', 'Label size (px)', 'Marks and labels', 6, 40, 0.5, 11);
 num('look.labelAlpha', 'Label brightness', 'Marks and labels', 0.05, 1, 0.01, 0.8);
 

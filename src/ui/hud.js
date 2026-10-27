@@ -53,7 +53,7 @@ export class Hud {
     if (H.ledger) this._ledger(ctx, world, state, size, lh, pad, vh, H.alpha);
     if (H.log) this._log(ctx, world, size, lh, pad, vw, vh, H.alpha);
     if (H.ruler) this._ruler(ctx, world, look, vw, vh, size, H.alpha);
-    if (H.linkNotes) this._linkNotes(ctx, world, size, H.alpha);
+    if (H.linkNotes) this._linkNotes(ctx, world, size, H.alpha, look.look.labelRotate);
     if (H.tags) {
       const n = state.heldId ? world.get(state.heldId) : state.hoverId ? world.get(state.hoverId) : null;
       if (n && n.r) this._tag(ctx, n, look, size, lh, vw, vh, H.alpha);
@@ -147,7 +147,8 @@ export class Hud {
     ctx.globalAlpha = 1;
   }
 
-  _linkNotes(ctx, world, size, alpha) {
+  // With turned labels (portrait posters) the annotations turn the same way, around the middle of their link.
+  _linkNotes(ctx, world, size, alpha, rotate = false) {
     ctx.textAlign = 'center';
     const small = size * 0.85;
     ctx.font = `${small}px ${FONT_FAMILY}`;
@@ -156,7 +157,14 @@ export class Hud {
       if (!a || !b || Math.min(a.sharp, b.sharp) < 0.35) continue;
       if (Math.abs(a.sx - b.sx) > 500 || Math.abs(a.sy - b.sy) > 500) continue;
       ctx.globalAlpha = alpha * 0.8 * Math.min(a.sharp, b.sharp);
-      ctx.fillText(`${(world.t - l.born).toFixed(0)}S`, (a.sx + b.sx) / 2, (a.sy + b.sy) / 2 - 4);
+      const text = `${(world.t - l.born).toFixed(0)}S`, mx = (a.sx + b.sx) / 2, my = (a.sy + b.sy) / 2;
+      if (rotate) {
+        ctx.save();
+        ctx.translate(mx, my);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText(text, 0, -4);
+        ctx.restore();
+      } else ctx.fillText(text, mx, my - 4);
     }
     ctx.font = `${size}px ${FONT_FAMILY}`;
     ctx.textAlign = 'left';

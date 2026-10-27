@@ -1,4 +1,5 @@
 import { TYPES } from '../sim/params.js';
+import { labelTransform } from './labelgeom.js';
 
 export const FONT_FAMILY = '"Bungee Hairline", monospace';
 const LINK_DASH = { venue: [], artist: [1.5, 3], genre: [7, 4], theme: [16, 6], event: [10, 3, 2, 3], star: [2, 5] };
@@ -184,9 +185,14 @@ export class Renderer {
         if (n.name && this._showLabel(L, r, emph) && !(emph && look.hud.tags)) {
           ctx.globalAlpha = clamp(alpha * L.labelAlpha * (emph ? 1.2 : 1), 0, 1);
           const text = n.name.toUpperCase();
-          const lx = r.sx + r.rad + LABEL_GAP, ly = r.sy + L.labelSize * 0.35;
-          ctx.fillText(text, lx, ly);
-          r.label = { x: lx, y: ly - L.labelSize, w: ctx.measureText(text).width, h: L.labelSize * 1.3 };
+          const t = labelTransform(L.labelRotate, r.sx, r.sy, r.rad, L.labelSize, LABEL_GAP);
+          ctx.save();
+          ctx.translate(t.originX, t.originY);
+          ctx.rotate(t.rot);
+          ctx.fillText(text, t.tx, t.ty);
+          ctx.restore();
+          // the hover area follows the title, except when it is turned (that mode is for stills, not for hovering)
+          r.label = L.labelRotate ? null : { x: r.sx + t.tx, y: r.sy + t.ty - L.labelSize, w: ctx.measureText(text).width, h: L.labelSize * 1.3 };
         } else if (!emph) r.label = null;
       });
     }

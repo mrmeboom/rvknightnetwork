@@ -12,7 +12,7 @@ export const ESSENTIALS = [
 ];
 
 // Parameters shown elsewhere in the panel (the Run section) and so left out of the lists below.
-const ELSEWHERE = new Set(['run.timeScale']);
+const ELSEWHERE = new Set(['run.timeScale', 'look.labelRotate']);
 
 // Splits every parameter into the Essentials sections and the Advanced groups. Each appears exactly once.
 export function splitSchema() {

@@ -110,6 +110,7 @@ export class Panel {
         el('button', { type: 'button', onclick: () => app.exportPng(1) }, '1X'),
         el('button', { type: 'button', onclick: () => app.exportPng(2) }, '2X'),
         el('button', { type: 'button', onclick: () => app.exportPng(4) }, '4X')),
+      this._row({ ...LOOK_SCHEMA.find((e) => e.path === 'look.labelRotate'), src: 'look' }), // turns labels and link notes 90° counter-clockwise: for portrait posters
       el('div', { class: 'line' }, el('label', {}, 'RECIPE'),
         el('button', { type: 'button', onclick: () => app.copyRecipe() }, 'COPY'),
         el('button', { type: 'button', onclick: () => { pasteBox.hidden = !pasteBox.hidden; } }, 'PASTE')),

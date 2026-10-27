@@ -167,6 +167,8 @@ test('hover tag: stays on screen near the edges, and its box becomes the hover a
 // ---- panel organisation ------------------------------------------------------------
 
 import { splitSchema, ESSENTIALS } from '../src/ui/essentials.js';
+import { readFileSync } from 'node:fs';
+import { controlled, ctlNode } from './helpers.js';
 import { SCHEMA } from '../src/sim/params.js';
 import { LOOK_SCHEMA } from '../src/ui/look.js';
 
@@ -174,7 +176,7 @@ test('panel: every parameter appears exactly once, either in Essentials or in an
   const { essentials, advanced } = splitSchema();
   const shown = [...essentials.flatMap((s) => s.entries), ...[...advanced.values()].flat()].map((e) => e.path);
   assert.equal(new Set(shown).size, shown.length, 'no parameter listed twice');
-  const expected = [...SCHEMA, ...LOOK_SCHEMA].map((e) => e.path).filter((p) => p !== 'run.timeScale');
+  const expected = [...SCHEMA, ...LOOK_SCHEMA].map((e) => e.path).filter((p) => p !== 'run.timeScale' && p !== 'look.labelRotate'); // these two sit in the Run section
   assert.deepEqual([...shown].sort(), [...expected].sort(), 'nothing is lost');
 });
 
@@ -200,4 +202,60 @@ test('corner titles: the title top left and the mark top right, set like the led
   const ledger = calls.find((c) => c.text.startsWith('SEED'));
   assert.equal(left.font, ledger.font, 'same type size as the corner ledger');
   assert.ok(!draw(resolveLook({ hud: { titles: false } })).some((c) => c.text === 'MRTY.26'), 'can be turned off');
+});
+
+// ---- turned labels (for portrait posters) -----------------------------------------------
+
+import { labelTransform, labelStart } from '../src/render/labelgeom.js';
+
+test('labels: by default they sit right of the mark; turned, they sit above it and read upward', () => {
+  const sx = 300, sy = 200, rad = 7, size = 11, gap = 14;
+  const flat = labelTransform(false, sx, sy, rad, size, gap);
+  assert.equal(flat.rot, 0);
+  const f = labelStart(flat);
+  assert.ok(Math.abs(f.x - (sx + rad + gap)) < 1e-9 && Math.abs(f.y - (sy + size * 0.35)) < 1e-9, 'unchanged from before');
+
+  const turned = labelTransform(true, sx, sy, rad, size, gap);
+  assert.ok(Math.abs(turned.rot + Math.PI / 2) < 1e-12, '90 degrees counter-clockwise (negative on a canvas)');
+  assert.equal(turned.originX, sx); assert.equal(turned.originY, sy, 'around the centre of the node');
+  const t = labelStart(turned);
+  assert.ok(Math.abs(t.x - (sx + size * 0.35)) < 1e-9, 'directly above the node (a hair of offset keeps the text centred on it)');
+  assert.ok(Math.abs(t.y - (sy - (rad + gap))) < 1e-9, 'the same distance from the centre as before, now upward');
+  // the reading direction is up the screen
+  const dir = { x: Math.cos(turned.rot), y: Math.sin(turned.rot) };
+  assert.ok(Math.abs(dir.x) < 1e-12 && Math.abs(dir.y + 1) < 1e-12);
+});
+
+test('labels: the turn is one switch called Turn 90°, off by default, shown in the Run section and nowhere else', () => {
+  assert.equal(LOOK_DEFAULTS.look.labelRotate, false);
+  assert.equal(LOOK_SCHEMA.find((e) => e.path === 'look.labelRotate').label, 'Turn 90°');
+  const { essentials, advanced } = splitSchema();
+  const listed = [...essentials.flatMap((s) => s.entries), ...[...advanced.values()].flat()].map((e) => e.path);
+  assert.ok(!listed.includes('look.labelRotate'), 'not repeated in Essentials or Advanced');
+  const panel = readFileSync(new URL('../src/ui/panel.js', import.meta.url), 'utf8');
+  const run = panel.slice(panel.indexOf('  _runSection() {'), panel.indexOf('  _macroSection() {'));
+  assert.ok(run.indexOf("app.exportPng(4)") < run.indexOf("'look.labelRotate'"), 'directly after the export buttons');
+});
+
+test('link annotations turn with the labels, around the middle of their link', () => {
+  const w = controlled([ctlNode('A', 'artist', 500, 500), ctlNode('B', 'artist', 600, 500)]);
+  w.step();
+  assert.equal(w.links.length, 1);
+  for (const n of w.nodes) n.r = { sx: n.x, sy: n.y, sharp: 1, rad: 3, nn: 0, bright: 1 };
+  const draw = (rotate) => {
+    const calls = [];
+    const ctx = { ...fakeCtx(), save() { calls.push(['save']); }, restore() { calls.push(['restore']); }, translate(x, y) { calls.push(['translate', x, y]); }, rotate(a) { calls.push(['rotate', a]); }, fillText(text, x, y) { calls.push(['fillText', text, x, y]); } };
+    const look = resolveLook({ hud: { linkNotes: true, titles: false, ledger: false, log: false, tags: false }, look: { labelRotate: rotate } });
+    new Hud().draw(ctx, { vw: 1000, vh: 800, dpr: 1 }, w, look, { paused: false });
+    return calls;
+  };
+  const flat = draw(false), turned = draw(true);
+  const mid = (w.nodes[0].x + w.nodes[1].x) / 2;
+  assert.ok(flat.some((c) => c[0] === 'fillText' && /^\d+S$/.test(c[1]) && Math.abs(c[2] - mid) < 1e-9), 'unturned: drawn at the middle of the link');
+  assert.ok(!flat.some((c) => c[0] === 'rotate'));
+  const i = turned.findIndex((c) => c[0] === 'rotate');
+  assert.ok(i > 0 && Math.abs(turned[i][1] + Math.PI / 2) < 1e-12, 'turned: 90° counter-clockwise');
+  const tr = turned.slice(0, i).reverse().find((c) => c[0] === 'translate');
+  assert.ok(Math.abs(tr[1] - mid) < 1e-9, 'around the middle of the link');
+  assert.ok(turned.slice(i).some((c) => c[0] === 'fillText' && /^\d+S$/.test(c[1]) && c[2] === 0));
 });
