@@ -9,3 +9,7 @@ gemini.txt
 rvk_night_network.html
 fonts_test.html
 fonts/DepartureMono-*
+
+# local analysis files
+*.csv
+*.har
