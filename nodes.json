@@ -8,7 +8,6 @@
     {"name": "Paloma", "type": "venue"},
     {"name": "Bravó", "type": "venue"},
     {"name": "Prikið", "type": "venue"},
-    {"name": "Kex Hostel", "type": "venue"},
     {"name": "Mengi", "type": "venue"},
     {"name": "Harpa", "type": "venue"},
     {"name": "Iðnó", "type": "venue"},
@@ -50,7 +49,7 @@
     {"name": "Auto", "type": "venue"},
     {"name": "Mót", "type": "venue"},
     {"name": "Kjarvalsstaðir", "type": "venue"},
-
+    
     {"name": "Kiasmos", "type": "artist"},
     {"name": "GusGus", "type": "artist"},
     {"name": "Björk", "type": "artist"},
@@ -58,7 +57,7 @@
     {"name": "Ólafur Arnalds", "type": "artist"},
     {"name": "Sóley", "type": "artist"},
     {"name": "Vök", "type": "artist"},
-    {"name": "Hatari", "type": "artist"},
+    {"name": "Tu Ha? Tu Bjö!", "type": "artist"},
     {"name": "Kælan Mikla", "type": "artist"},
     {"name": "Sykur", "type": "artist"},
     {"name": "Páll Óskar", "type": "artist"},
@@ -131,6 +130,9 @@
     {"name": "Ragnar Kjartansson", "type": "artist"},
     {"name": "JFDR", "type": "artist"},
     {"name": "Kristian Sønderlund Ross", "type": "artist"},
+    {"name": "Ægir Sindri Bjarnason", "type": "artist"},
+    {"name": "OBC", "type": "artist"},
+    {"name": "Sóley Stefánsdóttir", "type": "artist"},
 
     {"name": "Darkwave", "type": "genre"},
     {"name": "Post-rock", "type": "genre"},
