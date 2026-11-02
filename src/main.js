@@ -1,6 +1,7 @@
 import { createWorld, exportRecipe, normalizeRecipe } from './recipe.js';
 import { Renderer } from './render/canvas2d.js';
-import { makeGrainTile, paintGrain } from './render/grain.js';
+import { makeGrainTile } from './render/grain.js';
+import { paintStill, anyExportLayer, sanitizeExportLayers } from './render/layers.js';
 import { Sky } from './render/sky.js';
 import { TrailLayer } from './render/trails.js';
 import { Hud } from './ui/hud.js';
@@ -12,6 +13,7 @@ import { randomSeed } from './seed.js';
 import { getPath, setPath, clampToSchema, sanitizeParams } from './sim/params.js';
 
 const STORE_KEY = 'rvk.state.v1';
+const LAYERS_KEY = 'rvk.export.layers';
 // A few simulated seconds is enough: links form the moment nodes are in range, so the network is there from the
 // first step, and the log is cleared so the opening burst of links does not flood it. (30 s cost ~0.9 s of boot.)
 const WARMUP = 3;
@@ -38,7 +40,14 @@ const app = {
   stepReq: false,
   accum: 0,
   grainOffset: [0, 0],
+  exportLayers: sanitizeExportLayers(null),
   flash: () => {},
+
+  // which layers a PNG export contains (kept in this browser only; not part of recipes)
+  setExportLayer(key, on) {
+    this.exportLayers = sanitizeExportLayers({ ...this.exportLayers, [key]: on });
+    try { localStorage.setItem(LAYERS_KEY, JSON.stringify(this.exportLayers)); } catch { /* storage unavailable */ }
+  },
 
   // ---- values and edits used by the panel ------------------------------
   getSim(path) { return getPath(this.world.p, path); },
@@ -154,6 +163,8 @@ const app = {
   // ---- stills ----------------------------------------------------------
   exportPng(scale) {
     const { renderer, world, look } = this;
+    const layers = this.exportLayers;
+    if (!anyExportLayer(layers)) { this.flash('NOTHING TO EXPORT: ALL LAYERS ARE OFF'); return; }
     const maxSide = 16000;
     const s = Math.max(1, Math.min(scale, Math.floor(maxSide / Math.max(renderer.vw, renderer.vh))));
     const state = { paused: this.paused, hoverId: input.hoverId, heldId: input.heldId };
@@ -162,10 +173,7 @@ const app = {
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(renderer.vw * s); canvas.height = Math.round(renderer.vh * s);
     const c = canvas.getContext('2d');
-    this.sky.draw(c, renderer.vw, renderer.vh, s, world.t, look);
-    r2.drawScene(c, world, look, { hoverId: state.hoverId, heldId: state.heldId, underlay: (ctx) => this.trails.composite(ctx, world, look, s) });
-    paintGrain(c, grainTile, canvas.width, canvas.height, look.look.grain, look.look.grainSize * s, ...this.grainOffset.map((v) => v * s));
-    this.hud.draw(c, r2, world, look, state);
+    paintStill(c, { sky: this.sky, trails: this.trails, renderer: r2, world, look, hud: this.hud, grainTile, grainOffset: this.grainOffset, state, vw: renderer.vw, vh: renderer.vh, scale: s }, layers);
     renderer.prepare(world, look);
     canvas.toBlob((blob) => {
       if (!blob) { this.flash('EXPORT FAILED (IMAGE TOO LARGE?)'); return; }
@@ -205,6 +213,7 @@ async function boot() {
   await Promise.all([document.fonts.load('11px "Bungee Hairline"', 'ÞÐþðÁ'), app.loadNodeList()]);
   resize();
   window.addEventListener('resize', resize);
+  try { app.exportLayers = sanitizeExportLayers(JSON.parse(localStorage.getItem(LAYERS_KEY))); } catch { /* storage unavailable */ }
 
   const url = new URLSearchParams(location.search);
   const saved = url.has('fresh') ? null : loadSaved();

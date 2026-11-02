@@ -259,3 +259,86 @@ test('link annotations turn with the labels, around the middle of their link', (
   assert.ok(Math.abs(tr[1] - mid) < 1e-9, 'around the middle of the link');
   assert.ok(turned.slice(i).some((c) => c[0] === 'fillText' && /^\d+S$/.test(c[1]) && c[2] === 0));
 });
+
+// ---- export layers ----------------------------------------------------------------
+
+import { EXPORT_LAYERS, defaultExportLayers, sanitizeExportLayers, anyExportLayer, paintStill } from '../src/render/layers.js';
+import { Renderer } from '../src/render/canvas2d.js';
+
+// A drawing surface that accepts anything and writes down the method calls.
+function recordingCtx(w = 200, h = 100) {
+  const calls = [];
+  const store = { canvas: { width: w, height: h }, globalAlpha: 1 };
+  const proxy = new Proxy(store, {
+    get(t, k) {
+      if (k in t) return t[k];
+      if (k === 'measureText') return (s) => ({ width: String(s).length * 7 });
+      return (...a) => { calls.push(String(k)); return proxy; };
+    },
+    set(t, k, v) { t[k] = v; return true; },
+  });
+  return { ctx: proxy, calls };
+}
+
+test('export layers: sky, trails, nodes, grain and HUD, all on by default, in that order', () => {
+  assert.deepEqual(EXPORT_LAYERS.map((l) => l.key), ['sky', 'trails', 'nodes', 'grain', 'hud']);
+  assert.deepEqual(EXPORT_LAYERS.map((l) => l.label), ['SKY', 'TRAILS', 'NODES', 'GRAIN', 'HUD']);
+  assert.ok(Object.values(defaultExportLayers()).every((v) => v === true));
+});
+
+test('export layers: saved values are cleaned, and only a plain false turns a layer off', () => {
+  assert.deepEqual(sanitizeExportLayers(null), defaultExportLayers());
+  assert.deepEqual(sanitizeExportLayers({ hud: false, grain: 0, nope: false, sky: 'no' }), { ...defaultExportLayers(), hud: false });
+  assert.equal(anyExportLayer(defaultExportLayers()), true);
+  assert.equal(anyExportLayer({ sky: false, trails: false, nodes: false, grain: false, hud: false }), false);
+});
+
+test('export layers: each layer is painted when on and skipped when off, bottom to top', () => {
+  const order = [];
+  const deps = (over = {}) => ({
+    sky: { draw() { order.push('sky'); } },
+    trails: { composite() { order.push('trails'); } },
+    renderer: { drawScene(c, w, l, o) { order.push(`scene:${o.nodes ? 'nodes' : 'bare'}:${o.clear === false ? 'keep' : 'clear'}`); if (o.underlay) o.underlay(c); } },
+    hud: { draw() { order.push('hud'); } },
+    world: { t: 5 }, look: { look: { grain: 0.1, grainSize: 1 } }, grainTile: { width: 1 }, grainOffset: [0, 0],
+    state: {}, vw: 200, vh: 100, scale: 1, ...over,
+  });
+  const run = (layers) => { order.length = 0; paintStill(recordingCtx().ctx, deps(), { ...defaultExportLayers(), ...layers }); return [...order]; };
+  assert.deepEqual(run({}), ['sky', 'scene:nodes:keep', 'trails', 'hud']);
+  assert.deepEqual(run({ sky: false }), ['scene:nodes:keep', 'trails', 'hud'], 'no sky: nothing painted underneath');
+  assert.deepEqual(run({ trails: false }), ['sky', 'scene:nodes:keep', 'hud']);
+  assert.deepEqual(run({ nodes: false }), ['sky', 'scene:bare:keep', 'trails', 'hud'], 'trails and HUD can stand without the nodes');
+  assert.deepEqual(run({ hud: false }), ['sky', 'scene:nodes:keep', 'trails']);
+  assert.deepEqual(run({ sky: false, trails: false, nodes: false, grain: false }), ['scene:bare:keep', 'hud'], 'any combination works');
+});
+
+test('export layers: grain is painted over the nodes and under the HUD, only when on', () => {
+  const { ctx, calls } = recordingCtx();
+  const stub = (name) => ({ draw() { calls.push(name); }, drawScene() { calls.push(name); }, composite() {} });
+  const d = { sky: stub('sky'), trails: stub('trails'), renderer: stub('scene'), hud: stub('hud'), world: { t: 0 }, look: { look: { grain: 0.5, grainSize: 1 } }, grainTile: { width: 4 }, grainOffset: [0, 0], state: {}, vw: 200, vh: 100, scale: 1 };
+  paintStill(ctx, d, defaultExportLayers());
+  assert.ok(calls.indexOf('scene') < calls.indexOf('drawImage') && calls.indexOf('drawImage') < calls.indexOf('hud'), 'scene, then grain tiles, then HUD');
+  calls.length = 0;
+  paintStill(ctx, d, { ...defaultExportLayers(), grain: false });
+  assert.ok(!calls.includes('drawImage'), 'no grain tiles');
+});
+
+test('export: the real scene draw keeps the sky underneath, and can leave the nodes out', () => {
+  const w = makeWorld(); w.run(30);
+  const look = resolveLook({});
+  const r = new Renderer(); r.resize(200, 100, 1);
+  const draw = (opts) => { const { ctx, calls } = recordingCtx(); r.drawScene(ctx, w, look, opts); return calls; };
+  assert.ok(draw({}).includes('clearRect'), 'live page: the transparent scene canvas is cleared each frame');
+  assert.ok(!draw({ clear: false }).includes('clearRect'), 'a still keeps the sky it already painted');
+  const withNodes = draw({ clear: false }), without = draw({ clear: false, nodes: false });
+  assert.ok(withNodes.length > without.length && !without.includes('stroke') && !without.includes('fill'), 'nothing of the links or marks without the nodes');
+  assert.ok(w.nodes.every((n) => n.r && Number.isFinite(n.r.sx)), 'the projection is still prepared, so the HUD can place its tags');
+});
+
+test('export layers: the buttons sit right under EXPORT PNG, and the export is not blocked by them being remembered', () => {
+  const panel = readFileSync(new URL('../src/ui/panel.js', import.meta.url), 'utf8');
+  const run = panel.slice(panel.indexOf('  _runSection() {'), panel.indexOf('  _macroSection() {'));
+  assert.ok(run.indexOf('app.exportPng(4)') < run.indexOf('this._layerButtons()') && run.indexOf('this._layerButtons()') < run.indexOf("'look.labelRotate'"));
+  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  assert.match(main, /anyExportLayer\(layers\)/, 'an export with every layer off says so instead of saving an empty file');
+});

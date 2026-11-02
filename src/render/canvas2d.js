@@ -68,14 +68,16 @@ export class Renderer {
   }
 
   // Draws onto a transparent canvas (the sky is its own layer underneath).
-  // opts: { hoverId, heldId, underlay(ctx) } where underlay paints the trails between the sky and the live view.
+  // opts: { hoverId, heldId, underlay(ctx), clear, nodes } where underlay paints the trails between the sky and the live view,
+  // clear: false keeps what is already on the canvas (stills draw the sky first), nodes: false skips the links and marks.
   drawScene(ctx, world, look, opts = {}) {
     const { vw, vh, dpr } = this;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    if (opts.clear !== false) ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.prepare(world, look);
     if (opts.underlay) { opts.underlay(ctx); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    if (opts.nodes === false) return;
     this._drawLinks(ctx, world, look);
     this._drawNodes(ctx, world, look, opts);
   }

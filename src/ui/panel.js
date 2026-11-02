@@ -1,6 +1,7 @@
 import { MACROS } from '../sim/macros.js';
 import { splitSchema } from './essentials.js';
 import { LOOK_SCHEMA } from './look.js';
+import { EXPORT_LAYERS } from '../render/layers.js';
 
 function el(tag, attrs = {}, ...kids) {
   const e = document.createElement(tag);
@@ -110,6 +111,7 @@ export class Panel {
         el('button', { type: 'button', onclick: () => app.exportPng(1) }, '1X'),
         el('button', { type: 'button', onclick: () => app.exportPng(2) }, '2X'),
         el('button', { type: 'button', onclick: () => app.exportPng(4) }, '4X')),
+      this._layerButtons(),
       this._row({ ...LOOK_SCHEMA.find((e) => e.path === 'look.labelRotate'), src: 'look' }), // turns labels and link notes 90° counter-clockwise: for portrait posters
       el('div', { class: 'line' }, el('label', {}, 'RECIPE'),
         el('button', { type: 'button', onclick: () => app.copyRecipe() }, 'COPY'),
@@ -130,6 +132,20 @@ export class Panel {
     });
     pasteBox.addEventListener('focus', () => { const apply = this.root.querySelector('[data-paste-apply]'); if (apply) apply.hidden = false; });
     return this._section('Run', body);
+  }
+
+  // Which layers go into an exported PNG. Lit means in the file.
+  _layerButtons() {
+    const { app } = this;
+    const line = el('div', { class: 'line' });
+    for (const l of EXPORT_LAYERS) {
+      const btn = el('button', { type: 'button', class: 'toggle', title: l.title });
+      btn.textContent = l.label;
+      btn.addEventListener('click', () => { app.setExportLayer(l.key, !app.exportLayers[l.key]); this.refresh(); });
+      this.controls.push({ refresh: () => btn.classList.toggle('on', !!app.exportLayers[l.key]) });
+      line.append(btn);
+    }
+    return line;
   }
 
   _macroSection() {
